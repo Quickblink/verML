@@ -7,14 +7,6 @@ lemma set_Pi_pmf: "finite A \<Longrightarrow>  f \<in> set_pmf (Pi_pmf A dflt (%
   by (meson prod_zero) 
 
 
-locale learning_basics =
-  fixes X :: "'a set"
-    and Y :: "'b set"
-    and H :: "('a \<Rightarrow> 'b) set"
-assumes cardY: "card Y = 2"
-    and Hdef: "\<forall>h x. h\<in>H \<longrightarrow> h x \<in> Y"
-    and nnH: "H \<noteq> {}"
-begin
 
 
 text \<open>Definition of the Prediction Error (2.1). 
@@ -28,18 +20,18 @@ lemma PredErr_alt: "PredErr D f h = measure_pmf.prob D {S\<in>set_pmf D.  f S \<
 
 
 text \<open>Definition of the Training Error (2.2). \<close>
-definition TrainErr :: " ('c \<Rightarrow> ('a * 'b)) \<Rightarrow> 'c set \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> real" where
-  "TrainErr S I h = sum (\<lambda>i. case (S i) of (x,y) \<Rightarrow> if h x \<noteq> y then 1::real else 0) I / card I"
+definition TrainErr :: " ('c \<Rightarrow> 'a) \<Rightarrow> 'c set \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> real" where
+  "TrainErr S I h f = sum (\<lambda>i. if h (S i) \<noteq> f (S i) then 1::real else 0) I / card I"
 
-lemma TrainErr_nn: "TrainErr S I h \<ge> 0"
+lemma TrainErr_nn: "TrainErr S I h f \<ge> 0"
 proof -
   have "0 \<le> (\<Sum>i\<in>I. 0::real)" by simp
-  also have "\<dots> \<le> (\<Sum>i\<in>I. case S i of (x, y) \<Rightarrow> if h x \<noteq> y then 1 else 0)"
+  also have "\<dots> \<le> sum (\<lambda>i. if h (S i) \<noteq> f (S i) then 1::real else 0) I"
     apply(rule sum_mono) by (simp add: split_beta') 
   finally show ?thesis 
     unfolding TrainErr_def by auto
 qed
-
+(*
 lemma TrainErr_correct: "finite I \<Longrightarrow> I \<noteq> {} \<Longrightarrow> TrainErr S I h = 0 \<Longrightarrow> i\<in>I \<Longrightarrow> h (fst (S i)) = snd (S i)"
 proof (rule ccontr)
   assume  "finite I" "I \<noteq> {}"
@@ -60,7 +52,7 @@ proof (rule ccontr)
   then have "TrainErr S I h > 0" unfolding TrainErr_def using ii by auto
   moreover assume "TrainErr S I h = 0"
   ultimately show "False" by simp
-qed
+qed *)
 
 (* Sample D f, takes a sample x of the distribution D and pairs it with its
     label f x; the result is a distribution on pairs of (x, f x). *)
@@ -73,14 +65,15 @@ lemma Sample_map: "Sample D f = map_pmf (\<lambda>x. (x, f x)) D"
 
 (* Samples n D f, generates a distribution of training sets of length n, which are
      independently and identically distribution wrt. to D.  *)
-definition Samples :: "nat \<Rightarrow> 'a pmf \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> ((nat \<Rightarrow> 'a \<times> 'b)) pmf" where
-  "Samples n D f = Pi_pmf {0..<n} undefined (\<lambda>_. Sample D f)"
+definition Samples :: "nat \<Rightarrow> 'a pmf  \<Rightarrow> ((nat \<Rightarrow> 'a)) pmf" where
+  "Samples n D = Pi_pmf {0..<n} undefined (\<lambda>_. D)"
 
 (* The Event `repeated_event n P` is the event, where n times the event P occurs *)
 definition "repeated_event n P = (PiE_dflt {0..<n} undefined (\<lambda>_. P))"
 
 (* as `Samples` executes identical and independent samples, the probability of the `repeated_event`
     is just the nth power of the probability to hit the event S in a single sample *)
+(*
 lemma iid: "measure_pmf.prob (Samples n D f) (repeated_event n S) = measure_pmf.prob (Sample D f) S ^ n"
 proof -
   have "measure_pmf.prob (Samples n D f) (repeated_event n S)
@@ -90,33 +83,44 @@ proof -
   also have "\<dots> = (measure_pmf.prob (Sample D f) S)^n" 
     apply(subst prod_constant) by auto
   finally show ?thesis .
-qed
+qed *)
+
+
+locale learning_basics =
+  fixes X :: "'a set"
+    and Y :: "'b set"
+    and H :: "('a \<Rightarrow> 'b) set"
+assumes cardY: "card Y = 2"
+    and Hdef: "\<forall>h x. h\<in>H \<longrightarrow> h x \<in> Y"
+    and nnH: "H \<noteq> {}"
+begin
 
 subsection "Definition of PAC learnability"
 
 text \<open>The definition of PAC learnability following Definition 3.1.:\<close>
 
-definition PAC_learnable :: "((nat \<Rightarrow> 'a \<times> 'b) \<Rightarrow> nat \<Rightarrow> ('a \<Rightarrow> 'b)) \<Rightarrow> bool" where
+definition PAC_learnable :: "((nat \<Rightarrow> 'a) \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> nat \<Rightarrow> ('a \<Rightarrow> 'b)) \<Rightarrow> bool" where
   "PAC_learnable L = (\<exists>M::(real \<Rightarrow> real \<Rightarrow> nat). 
             (\<forall>D f. set_pmf D \<subseteq> X \<longrightarrow> f ` X = Y \<longrightarrow> (\<exists>h'\<in>H. PredErr D f h' = 0) \<longrightarrow> (\<forall>m. \<forall> \<epsilon> > 0. \<forall>\<delta>\<in>{x.0<x\<and>x<1}. m \<ge> M \<epsilon> \<delta> \<longrightarrow> 
-          measure_pmf.prob (Samples m D f) {S. PredErr D f (L S m) \<le> \<epsilon>} \<ge> 1 - \<delta>)))"
+          measure_pmf.prob (Samples m D) {S. PredErr D f (L S f m) \<le> \<epsilon>} \<ge> 1 - \<delta>)))"
 
 
-definition ERM :: "(nat \<Rightarrow> ('a \<times> 'b)) \<Rightarrow> nat \<Rightarrow> ('a \<Rightarrow> 'b) set" where
-  "ERM S n = {h. is_arg_min (TrainErr S {0..<n}) (\<lambda>s. s\<in>H) h}"
+definition ERM :: "(nat \<Rightarrow> 'a) \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> nat \<Rightarrow> ('a \<Rightarrow> 'b) set" where
+  "ERM S f n = {h. is_arg_min (\<lambda>h. TrainErr S {0..<n} h f) (\<lambda>s. s\<in>H) h}"
 
-definition ERMe :: "(nat \<Rightarrow> ('a \<times> 'b)) \<Rightarrow> nat \<Rightarrow> ('a \<Rightarrow> 'b)" where
-  "ERMe S n = (SOME h. h\<in> ERM S n)"
+definition ERMe :: "(nat \<Rightarrow> 'a) \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> nat \<Rightarrow> ('a \<Rightarrow> 'b)" where
+  "ERMe S f n = (SOME h. h\<in> ERM S f n)"
  
-lemma ERM_0_in: "h' \<in> H \<Longrightarrow> TrainErr S {0..<n} h' = 0 \<Longrightarrow> h' \<in>ERM S n"
-  unfolding ERM_def by (simp add: TrainErr_nn is_arg_min_linorder)
-
-(*lemma ERM_nonempty: "H\<noteq>{} \<Longrightarrow> ERM S n \<noteq> {}" unfolding ERM_def 
+ lemma ERM_0_in: "h' \<in> H \<Longrightarrow> TrainErr S {0..<n} h' f = 0 \<Longrightarrow> h' \<in>ERM S f n"
+   unfolding ERM_def by (simp add: TrainErr_nn is_arg_min_linorder)
+(*
+lemma ERM_nonempty: "H\<noteq>{} \<Longrightarrow> ERM S n \<noteq> {}" unfolding ERM_def 
   by (simp add: ex_is_arg_min_if_finite fH) *)   
 
-lemma ERM_subset: "ERM S n \<subseteq> H" 
+lemma ERM_subset: "ERM S f n \<subseteq> H" 
   by (simp add: is_arg_min_linorder subset_iff ERM_def)   
 
+(*
 lemma ERM_aux: "h' \<in> ERM S m \<Longrightarrow> TrainErr S {0..<m} h' = 0
         \<Longrightarrow> h \<in> ERM S m
         \<Longrightarrow> TrainErr S {0..<m} h = 0"
@@ -129,7 +133,7 @@ lemma ERMe_minimal: assumes "h' \<in> ERM S m" "TrainErr S {0..<m} h' = 0"
   shows "TrainErr S {0..<m} (ERMe S m) = 0"
   unfolding ERMe_def using ERM_aux[OF assms] hinnonempty[OF assms(1)]
   by (simp add: some_in_eq) 
-
+*)
 
 end
 end

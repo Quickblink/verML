@@ -196,9 +196,12 @@ lemma nnHmap: "H_map \<noteq> {}" using nnH by auto
 lemma restrictH_map_conv: "restrictH H_map C Y = (\<lambda>h. restrict_map h C) ` H_map" 
   using auxtemp domh ranh by blast
 
-lemma finite_restrict: "finite C \<Longrightarrow> finite ((\<lambda>h. restrict_map h C) ` H_map)" using restrictH_map_conv[of C] finiteres[of C Y H_map] 
+lemma finite_restrict: "finite C \<Longrightarrow> finite ((\<lambda>h. restrict_map h C) ` H_map)"
 proof -
-  have "finite Y" using cardY
+  assume "finite C"
+  moreover have "finite Y" using cardY card_infinite by force
+  ultimately show ?thesis using restrictH_map_conv[of C] finiteres[of C Y H_map] by auto
+qed
 
 lemma assumes "H'\<noteq>{}" "H'\<subseteq>H_map"
     shows empty_shatted: "shatters H' {} D"
@@ -220,15 +223,15 @@ definition "growth m = Max {k. \<exists>C\<subseteq>X. k = card (restrictH H_map
 lemma "{k. \<exists>C\<subseteq>X. k = card (restrictH H_map C Y) \<and> card C = m} \<noteq> {}"
   by (smt Collect_empty_eq_bot bot_empty_eq empty_iff infinite_arbitrarily_large infx)
 
-lemma assumes "(\<forall>C\<subseteq>X. shatters H_map C Y \<longrightarrow> card C < q)"
-  shows vcd_upper: "\<exists>d. VCDim = Some d \<and> d < q"
+lemma assumes "(\<forall>C\<subseteq>X. shatters H_map C Y \<longrightarrow> (card C) \<le> q)"
+  shows vcd_upper: "\<exists>d. VCDim = Some d \<and>  d \<le> q"
 proof -
-  have s1: "\<forall>k\<in>{m. \<exists>C\<subseteq>X. card C = m \<and> shatters H_map C Y}. k < q"
+  have s1: "\<forall>k\<in>{m. \<exists>C\<subseteq>X. card C = m \<and> shatters H_map C Y}. k \<le> q"
     using assms by auto
   then have f1: "finite {m. \<exists>C\<subseteq>X. card C = m \<and> shatters H_map C Y}"
-    by (meson finite_nat_set_iff_bounded)
+    using finite_nat_set_iff_bounded_le by blast 
   then obtain d where "VCDim = Some d" using VCDim_def by auto
-  moreover from this have "d<q" using s1 VCDim_def
+  moreover from this have "d\<le>q" using s1 VCDim_def
     by (metis (mono_tags, lifting) Max_in empty_iff f1 mem_Collect_eq nnHmap option.simps(1) subsetI vcd.empty_shatted vcd_axioms) 
   ultimately show ?thesis by auto
 qed

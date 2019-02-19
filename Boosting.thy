@@ -1156,6 +1156,19 @@ lemma assumes
 shows "\<exists>od. outer.VCDim = Some od \<and> od \<le> nat(floor(2*((d+1)*T)/ln(2) * ln(((d+1)*T)/ln(2))))"
   using outer.vcd_upper final12[of _ d] assms le_nat_floor by (simp add: less_eq_real_def) 
 
-    
+lemma assumes "set_pmf D = X" "0<m"
+  shows doboost: "\<forall>S\<in>(set_pmf (Samples m D)). BOOST (S ` {0..<m}) y oh"
+  unfolding BOOST_def Samples_def
+  using assms(2) defonB ohtwoclass ytwoclass by auto
 
+term BOOST.loss
+
+lemma assumes "set_pmf D = X" "0<m" "S\<in>(set_pmf (Samples m D))"
+  shows "BOOST.loss (S ` {0..<m}) y oh T = TrainErr S {0..<m} (BOOST.hyp (S ` {0..<m}) y oh T) (\<lambda>x. y x > 0)"
+  unfolding TrainErr_def 
+proof -
+  have "BOOST.loss (S ` {0..<m}) y oh T = 1 / real (card (S ` {0..<m})) * (\<Sum>x\<in>(S ` {0..<m}). if 0 < BOOST.f (S ` {0..<m}) y oh T x * y x then 0 else 1)"
+    using doboost BOOST.defloss assms
+    by (metis (no_types, lifting) sum.cong) 
+  have "(\<Sum>i = 0..<m. if BOOST.hyp (S ` {0..<m}) y oh T (S i) \<noteq> (0 < y (S i)) then 1 else 0) / real (card {0..<m}) "
 end

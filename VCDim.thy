@@ -720,18 +720,18 @@ qed
 lemma assumes "set_pmf D \<subseteq> X"
       and "f ` X = Y"
       and "\<delta>\<in>{x.0<x\<and>x<1}"
-    shows theorem611: "measure_pmf.prob (Samples m D f) {S. \<forall>h\<in>H. abs(PredErr D f h - TrainErr S {0..<m} h)
+    shows theorem611: "measure_pmf.prob (Samples m D) {S. \<forall>h\<in>H. abs(PredErr D f h - TrainErr S {0..<m} h f)
                    \<le> (4+sqrt(ln(real(growth (2*m)))))/(\<delta> * sqrt(2*m))} \<ge> 1 - \<delta>"
   sorry
 
 
-definition representative :: "(nat \<Rightarrow> 'a \<times> 'b) \<Rightarrow> nat \<Rightarrow> real \<Rightarrow> 'a pmf \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> bool" where
-  "representative S m \<epsilon> D f \<longleftrightarrow> (\<forall>h\<in>H. abs(PredErr D f h - TrainErr S {0..<m} h) \<le> \<epsilon>)"
+definition representative :: "(nat \<Rightarrow> 'a) \<Rightarrow> nat \<Rightarrow> real \<Rightarrow> 'a pmf \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> bool" where
+  "representative S m \<epsilon> D f \<longleftrightarrow> (\<forall>h\<in>H. abs(PredErr D f h - TrainErr S {0..<m} h f) \<le> \<epsilon>)"
 
 
 definition "uniform_convergence = (\<exists>M::(real \<Rightarrow> real \<Rightarrow> nat). 
             (\<forall>D f. set_pmf D \<subseteq> X \<longrightarrow> f ` X = Y  \<longrightarrow> (\<forall>m. \<forall> \<epsilon> > 0. \<forall>\<delta>\<in>{x.0<x\<and>x<1}. m \<ge> M \<epsilon> \<delta> \<longrightarrow> 
-          measure_pmf.prob (Samples m D f) {S. representative S m \<epsilon> D f} \<ge> 1 - \<delta>)))"
+          measure_pmf.prob (Samples m D) {S. representative S m \<epsilon> D f} \<ge> 1 - \<delta>)))"
 
 lemma ceil_gr: "y \<ge> ceiling x \<Longrightarrow> real y \<ge> x"
   by linarith
@@ -830,12 +830,12 @@ lemma assumes "C\<subseteq>X" "1<d" "VCDim = Some d" "d \<le> m" "card C \<le> m
       and "m \<ge> M \<epsilon> \<delta>"
       and "M = (\<lambda>\<epsilon> \<delta>. nat( ceiling (((ln(d+1)+d*2)/(\<epsilon>*\<delta>/2)^2)^2/2 + (4/(\<epsilon>*\<delta>/2))^2/2 + 1 + d)))"
       and "VCDim = Some d"
-    shows aux456: "h\<in>H \<Longrightarrow> abs(PredErr D f h - TrainErr S {0..<m} h)
+    shows aux456: "h\<in>H \<Longrightarrow> abs(PredErr D f h - TrainErr S {0..<m} h f)
      \<le> (4+sqrt(ln(real(growth (2*m)))))/(\<delta> * sqrt(real(2*m)))
-      \<Longrightarrow> abs(PredErr D f h - TrainErr S {0..<m} h) \<le> \<epsilon>"
+      \<Longrightarrow> abs(PredErr D f h - TrainErr S {0..<m} h f) \<le> \<epsilon>"
   proof -
     fix S h
-    assume a10: "h\<in>H" "abs(PredErr D f h - TrainErr S {0..<m} h)
+    assume a10: "h\<in>H" "abs(PredErr D f h - TrainErr S {0..<m} h f)
      \<le> (4+sqrt(ln(real(growth (2*m)))))/(\<delta> * sqrt(2*m))"
     have f1: "m \<ge> (((ln(d+1)+d*2)/(\<epsilon>*\<delta>/2)^2)^2/2 + (4/(\<epsilon>*\<delta>/2))^2/2 + 1 + d)"
       using assms(5,6) ceil_gr by auto
@@ -936,7 +936,7 @@ lemma assumes "C\<subseteq>X" "1<d" "VCDim = Some d" "d \<le> m" "card C \<le> m
        by (simp add: divide_divide_eq_left mult.commute)
     qed
     ultimately have "(4+sqrt(ln(real(growth (2*m)))))/(\<delta> * sqrt(2*m)) \<le> \<epsilon>" by auto
-    from this a10 show "abs(PredErr D f h - TrainErr S {0..<m} h) \<le> \<epsilon>" by auto
+    from this a10 show "abs(PredErr D f h - TrainErr S {0..<m} h f) \<le> \<epsilon>" by auto
   qed
 
 lemma subsetlesspmf: "A\<subseteq>B \<Longrightarrow> measure_pmf.prob Q A \<le> measure_pmf.prob Q B"
@@ -949,15 +949,15 @@ lemma assumes "set_pmf D \<subseteq> X"
       and "m \<ge> M \<epsilon> \<delta>"
       and "M = (\<lambda>\<epsilon> \<delta>. nat (ceiling (((ln(d+1)+d*2)/(\<epsilon>*\<delta>/2)^2)^2/2 + (4/(\<epsilon>*\<delta>/2))^2/2 + 1 + d)))"
       and "VCDim = Some d"
-    shows aux200: "measure_pmf.prob (Samples m D f) {S. representative S m \<epsilon> D f} \<ge> 1 - \<delta>"
+    shows aux200: "measure_pmf.prob (Samples m D) {S. representative S m \<epsilon> D f} \<ge> 1 - \<delta>"
 proof -
-  have "\<forall>h S. h\<in>H \<longrightarrow> abs(PredErr D f h - TrainErr S {0..<m} h)
+  have "\<forall>h S. h\<in>H \<longrightarrow> abs(PredErr D f h - TrainErr S {0..<m} h f)
      \<le> (4+sqrt(ln(real(growth (2*m)))))/(\<delta> * sqrt(real(2*m)))
-      \<longrightarrow> abs(PredErr D f h - TrainErr S {0..<m} h) \<le> \<epsilon>" using assms aux456 by auto
-  then have "{S. \<forall>h\<in>H. abs(PredErr D f h - TrainErr S {0..<m} h)
+      \<longrightarrow> abs(PredErr D f h - TrainErr S {0..<m} h f) \<le> \<epsilon>" using assms aux456 by auto
+  then have "{S. \<forall>h\<in>H. abs(PredErr D f h - TrainErr S {0..<m} h f)
      \<le> (4+sqrt(ln(real(growth (2*m)))))/(\<delta> * sqrt(2*m))}
-     \<subseteq>{S. (\<forall>h\<in>H. abs(PredErr D f h - TrainErr S {0..<m} h) \<le> \<epsilon>)}" by auto
-  moreover have "measure_pmf.prob (Samples m D f) {S. \<forall>h\<in>H. abs(PredErr D f h - TrainErr S {0..<m} h)
+     \<subseteq>{S. (\<forall>h\<in>H. abs(PredErr D f h - TrainErr S {0..<m} h f) \<le> \<epsilon>)}" by auto
+  moreover have "measure_pmf.prob (Samples m D) {S. \<forall>h\<in>H. abs(PredErr D f h - TrainErr S {0..<m} h f)
      \<le> (4+sqrt(ln(real(growth (2*m)))))/(\<delta> * sqrt(2*m))} \<ge> 1 - \<delta>"
     using assms theorem611 by auto
   ultimately show ?thesis using subsetlesspmf representative_def
@@ -975,7 +975,7 @@ proof -
                (\<forall>(m::nat) \<epsilon>. 0 < \<epsilon> \<longrightarrow>
                       (\<forall>(\<delta>::real)\<in>{x. 0 < x \<and> x < 1}.
                           M \<epsilon> \<delta> \<le> m \<longrightarrow>
-                          1 - \<delta> \<le> measure_pmf.prob (Samples m D f) {S. representative S m \<epsilon> D f})))"
+                          1 - \<delta> \<le> measure_pmf.prob (Samples m D) {S. representative S m \<epsilon> D f})))"
     using aux200 assms by auto
   then show ?thesis using uniform_convergence_def by auto
 qed
@@ -984,11 +984,11 @@ qed
 
 
 lemma assumes "representative S m \<epsilon> D f"
-          and "S\<in>Samples m D f"
+          and "S\<in>Samples m D"
           and "set_pmf D \<subseteq> X"
           and "f ` X = Y"
           and RealizabilityAssumption: "\<exists>h'\<in>H. PredErr D f h' = 0"
-        shows reptopred: "PredErr D f (ERMe S m) \<le> \<epsilon>"
+        shows reptopred: "PredErr D f (ERMe S f m) \<le> \<epsilon>"
 proof -
       from RealizabilityAssumption  
     obtain h' where h'H: "h'\<in>H" and u: "PredErr D f h' = 0" by blast
@@ -998,43 +998,31 @@ proof -
     have correct: "\<And>x. x\<in>set_pmf D \<Longrightarrow> f x = h' x" by blast
 
  from assms(2) set_Pi_pmf[where A="{0..<m}"]
-      have "\<And>i. i\<in>{0..<m} \<Longrightarrow> S i \<in> set_pmf (Sample D f)"
+      have "\<And>i. i\<in>{0..<m} \<Longrightarrow> S i \<in> set_pmf D"
         unfolding Samples_def by auto 
 
-    then have tD: "\<And>i. i\<in>{0..<m} \<Longrightarrow> fst (S i) \<in> set_pmf D \<and> f (fst (S i)) = snd (S i)"
-      unfolding Sample_def by fastforce+ 
+ then have Th'0: "TrainErr S {0..<m} h' f = 0" 
+   unfolding TrainErr_def using correct by auto
 
-    have z: "\<And>i. i\<in>{0..<m} \<Longrightarrow> (case S i of (x, y) \<Rightarrow> if h' x \<noteq> y then 1::real else 0) = 0"
-    proof -
-      fix i assume "i\<in>{0..<m}"
-      with tD have i: "fst (S i) \<in> set_pmf D" and ii: "f (fst (S i)) = snd (S i)" by auto
-      from i correct  have "f (fst (S i))  = h' (fst (S i))" by auto                
-      with ii have "h' (fst (S i)) = snd (S i)" by auto
-      then show "(case S i of (x, y) \<Rightarrow> if h' x \<noteq> y then 1::real else 0) = 0"
-        by (simp add: prod.case_eq_if)
-    qed
 
-    have Th'0: "TrainErr S {0..<m} h' = 0" 
-      unfolding TrainErr_def   using z  
-      by fastforce
 
-    then have "h' \<in>ERM S m" using ERM_0_in h'H by auto
-    then have "ERMe S m \<in> ERM S m" using ERMe_def by (metis some_eq_ex)
-    then have "ERMe S m \<in> H" using ERM_subset by blast     
-    moreover have "(\<forall>h\<in>H. abs(PredErr D f h - TrainErr S {0..<m} h) \<le> \<epsilon>)"
+    then have "h' \<in>ERM S f m" using ERM_0_in h'H by auto
+    then have "ERMe S f m \<in> ERM S f m" using ERMe_def by (metis some_eq_ex)
+    then have "ERMe S f m \<in> H" using ERM_subset by blast     
+    moreover have "(\<forall>h\<in>H. abs(PredErr D f h - TrainErr S {0..<m} h f) \<le> \<epsilon>)"
       using representative_def assms(1) by blast
-    ultimately have "abs(PredErr D f (ERMe S m) - TrainErr S {0..<m} (ERMe S m)) \<le> \<epsilon>"
+    ultimately have "abs(PredErr D f (ERMe S f m) - TrainErr S {0..<m} (ERMe S f m) f) \<le> \<epsilon>"
       using assms by auto
-    moreover have "TrainErr S {0..<m} (ERMe S m) = 0" 
+    moreover have "TrainErr S {0..<m} (ERMe S f m) f = 0" 
         proof -
-          have f1: "is_arg_min (TrainErr S {0..<m}) (\<lambda>f. f \<in> H) (ERMe S m)"
-            using ERM_def \<open>ERMe S m \<in> ERM S m\<close> by blast
+          have f1: "is_arg_min (\<lambda>h. TrainErr S {0..<m} h f) (\<lambda>f. f \<in> H) (ERMe S f m)"
+            using ERM_def \<open>ERMe S f m \<in> ERM S f m\<close> by blast
           have f2: "\<forall>r ra. (((ra::real) = r \<or> ra \<in> {}) \<or> \<not> r \<le> ra) \<or> \<not> ra \<le> r"
             by linarith
           have "(0::real) \<notin> {}"
             by blast
           then show ?thesis
-        using f2 f1 by (metis ERM_def Th'0 TrainErr_nn \<open>h' \<in> ERM S m\<close> is_arg_min_linorder mem_Collect_eq)
+        using f2 f1 by (metis ERM_def Th'0 TrainErr_nn \<open>h' \<in> ERM S f m\<close> is_arg_min_linorder mem_Collect_eq)
         qed
      ultimately show ?thesis by auto
 qed
@@ -1042,19 +1030,19 @@ qed
 
 
 lemma assumes "(\<forall>D f. set_pmf D \<subseteq> X \<longrightarrow> f ` X = Y  \<longrightarrow> (\<forall>m. \<forall> \<epsilon> > 0. \<forall>\<delta>\<in>{x.0<x\<and>x<1}. m \<ge> M \<epsilon> \<delta> \<longrightarrow> 
-          measure_pmf.prob (Samples m D f) {S. representative S m \<epsilon> D f} \<ge> 1 - \<delta>))"
+          measure_pmf.prob (Samples m D) {S. representative S m \<epsilon> D f} \<ge> 1 - \<delta>))"
   shows aux44:"set_pmf D \<subseteq> X \<Longrightarrow> f ` X = Y \<Longrightarrow> (\<exists>h'\<in>H. PredErr D f h' = 0) \<Longrightarrow>  \<epsilon> > 0 \<Longrightarrow> \<delta>\<in>{x.0<x\<and>x<1} \<Longrightarrow> m \<ge> M \<epsilon> \<delta> \<Longrightarrow> 
-          measure_pmf.prob (Samples m D f) {S. PredErr D f (ERMe S m) \<le> \<epsilon>} \<ge> 1 - \<delta>"
+          measure_pmf.prob (Samples m D) {S. PredErr D f (ERMe S f m) \<le> \<epsilon>} \<ge> 1 - \<delta>"
   proof -
   fix D f m \<epsilon> \<delta>
   assume a1: "set_pmf D \<subseteq> X" "f ` X = Y" "\<exists>h'\<in>H. PredErr D f h' = 0" "\<epsilon> > 0" "\<delta>\<in>{x.0<x\<and>x<1}" "m \<ge> M \<epsilon> \<delta>"
-  from this assms have "measure_pmf.prob (Samples m D f) {S. representative S m \<epsilon> D f} \<ge> 1 - \<delta>" by auto
-  then have "measure_pmf.prob (Samples m D f) 
-  {S. set_pmf D \<subseteq> X \<and> f ` X = Y \<and> (\<exists>h'\<in>H. PredErr D f h' = 0) \<and> (S\<in>Samples m D f) \<and> representative S m \<epsilon> D f} \<ge> 1 - \<delta>"
+  from this assms have "measure_pmf.prob (Samples m D) {S. representative S m \<epsilon> D f} \<ge> 1 - \<delta>" by auto
+  then have "measure_pmf.prob (Samples m D) 
+  {S. set_pmf D \<subseteq> X \<and> f ` X = Y \<and> (\<exists>h'\<in>H. PredErr D f h' = 0) \<and> (S\<in>Samples m D) \<and> representative S m \<epsilon> D f} \<ge> 1 - \<delta>"
     using a1 by (smt DiffE mem_Collect_eq pmf_prob_cong set_pmf_iff)
-  moreover have "{S. set_pmf D \<subseteq> X \<and> f ` X = Y \<and> (\<exists>h'\<in>H. PredErr D f h' = 0) \<and> (S\<in>Samples m D f) \<and> representative S m \<epsilon> D f}
-        \<subseteq> {S. PredErr D f (ERMe S m) \<le> \<epsilon>}" using reptopred by blast
-  ultimately show "measure_pmf.prob (Samples m D f) {S. PredErr D f (ERMe S m) \<le> \<epsilon>} \<ge> 1 - \<delta>"
+  moreover have "{S. set_pmf D \<subseteq> X \<and> f ` X = Y \<and> (\<exists>h'\<in>H. PredErr D f h' = 0) \<and> (S\<in>Samples m D) \<and> representative S m \<epsilon> D f}
+        \<subseteq> {S. PredErr D f (ERMe S f m) \<le> \<epsilon>}" using reptopred by blast
+  ultimately show "measure_pmf.prob (Samples m D) {S. PredErr D f (ERMe S f m) \<le> \<epsilon>} \<ge> 1 - \<delta>"
     using subsetlesspmf order_trans by fastforce
 qed
 
@@ -1065,10 +1053,10 @@ lemma assumes "uniform_convergence"(*"representative H S m (\<epsilon>/2)"*)
   shows "PAC_learnable (ERMe)" 
 proof -
   obtain M where f1: "(\<forall>D f. set_pmf D \<subseteq> X \<longrightarrow> f ` X = Y  \<longrightarrow> (\<forall>m. \<forall> \<epsilon> > 0. \<forall>\<delta>\<in>{x.0<x\<and>x<1}. m \<ge> M \<epsilon> \<delta> \<longrightarrow> 
-          measure_pmf.prob (Samples m D f) {S. representative S m \<epsilon> D f} \<ge> 1 - \<delta>))"
+          measure_pmf.prob (Samples m D) {S. representative S m \<epsilon> D f} \<ge> 1 - \<delta>))"
     using assms uniform_convergence_def by auto
   from aux44 f1 have "(\<forall>D f. set_pmf D \<subseteq> X \<longrightarrow> f ` X = Y \<longrightarrow> (\<exists>h'\<in>H. PredErr D f h' = 0) \<longrightarrow> (\<forall>m. \<forall> \<epsilon> > 0. \<forall>\<delta>\<in>{x.0<x\<and>x<1}. m \<ge> M \<epsilon> \<delta> \<longrightarrow> 
-          measure_pmf.prob (Samples m D f) {S. PredErr D f (ERMe S m) \<le> \<epsilon>} \<ge> 1 - \<delta>))"
+          measure_pmf.prob (Samples m D) {S. PredErr D f (ERMe S f m) \<le> \<epsilon>} \<ge> 1 - \<delta>))"
   by blast
   then show ?thesis using PAC_learnable_def by auto
 qed
